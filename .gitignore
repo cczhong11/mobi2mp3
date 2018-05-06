@@ -3,3 +3,4 @@
 *.aiff
 *.mobi
 *.pyc
+.DS_Store
