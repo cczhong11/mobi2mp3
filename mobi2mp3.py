@@ -86,7 +86,7 @@ class Mobi(object):
 
 
 book = Mobi(
-    "/Users/tczhong/Dropbox/待读/助推如何做出有关健康财富与幸福的最佳决策2017年诺贝尔经济学奖获得者理查德泰勒作品_2633750.mobi", "zh_CN")
+    "/Users/tczhong/Dropbox/待读/有效学习_-_乌尔里希伯泽尔.mobi", "zh_CN")
 book.to_txt()
 book.to_aiff()
 # book.concat_mp3()
