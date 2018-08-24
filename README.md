@@ -12,6 +12,7 @@ brew cask install calibre
 # Debian
 sudo apt-get install calibre
 ```
+
 2. install ffmpeg
 
 ```
@@ -21,5 +22,8 @@ brew cask install ffmpeg
 sudo apt-get install ffmpeg
 ```
 
-3. install gtts `pip install gtts`
-4. If you have a Mac and want to do tts offline. `pip install pyttsx3`
+3. install all requirement `pip install -r requirements.txt`
+
+## Main idea
+
+Change all mobi, epub, pdf to txt file, use tts service read them. Save them to local file and concat together using ffmpeg.

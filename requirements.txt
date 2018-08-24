@@ -8,4 +8,4 @@ ffmpeg_python == 0.1.10
 gTTS == 2.0.0
 
 # mobi2mp3.py: 3
-pyttsx3 == 2.7
+pyttsx3 >= 2.7
