@@ -27,3 +27,22 @@ sudo apt-get install ffmpeg
 ## Main idea
 
 Change all mobi, epub, pdf to txt file, use tts service read them. Save them to local file and concat together using ffmpeg.
+
+## Usage 
+
+```
+usage: mobi2mp3.py [-h] [-i INPUTFILE] [-o OUTPUTPATH] [-l LANGUAGE]
+                   [-f FORMAT] [-r RATE]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -i INPUTFILE, --inputfile INPUTFILE
+                        input file path
+  -o OUTPUTPATH, --outputpath OUTPUTPATH
+                        output file path
+  -l LANGUAGE, --language LANGUAGE
+                        language setting like zh_CN/en_US
+  -f FORMAT, --format FORMAT
+                        format setting like gtts/osx
+  -r RATE, --rate RATE  rate setting 100-400
+```
