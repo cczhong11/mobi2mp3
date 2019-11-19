@@ -6,7 +6,7 @@ import ffmpeg
 import argparse
 
 class Mobi(object):
-    def __init__(self, name, language, outputpath,outputformat,rate=200):
+    def __init__(self, name, language, outputpath,outputformat,rate=400):
         self.filename = name
         self.language = language
         self.outputpath = outputpath
@@ -65,13 +65,12 @@ class Mobi(object):
     '''
     Use ffmpeg to concat all aiff files and change to mp3
     '''
-    def concat_aiff(self):
+    def concat_aiff(self, count):
         os.system(
-            "ffmpeg -f concat -i result.txt -c copy {0}.aiff".format(self.bookname))
+            f"ffmpeg -f concat -i result-{count}.txt -c copy {count}-{self.bookname}.aiff")
         os.system(
-            "ffmpeg -i {0}.aiff -f mp3 -acodec libmp3lame -ab 192000 -ar 44100 {0}.mp3".format(self.bookname))
-        os.system("rm *.aiff")
-        os.system("rm result.txt")
+            f"ffmpeg -i {count}-{self.bookname}.aiff -f mp3 -acodec libmp3lame -ab 192000 -ar 44100 {count}-{self.bookname}.mp3")
+        os.system(f"rm result-{count}.txt")
 
     '''
     Choose language for sepcific language and read via OSX tts
@@ -81,9 +80,12 @@ class Mobi(object):
         voices = engine.getProperty('voices')
         res = []
         for i in voices:
-            if i.languages[0] == self.language and i.name=="Ting-Ting" or i.languages[0] == self.language and i.name=="Alice":
+            if (i.languages[0] == self.language and i.name=="Ting-Ting") or (i.languages[0] == self.language and i.name=="Alice"):
                 engine.setProperty('voice', i.id)
-        engine.setProperty('rate', self.rate)
+        if self.language=="zh_CN":
+            engine.setProperty('rate', 400)
+        else:
+            engine.setProperty('rate', 200)
         with open(self.outputpath+"/"+self.bookname + ".txt") as f:
             string = ""
             count = 0
@@ -94,7 +96,6 @@ class Mobi(object):
                     string += line
                     count += 1
                 if count > 100 and self.language=="zh_CN" or count>0 and self.language=="en_US":
-        
                     engine.save_to_file(
                         string, 'result-{0}.aiff'.format(total_count))
                     res.append('result-{0}.aiff'.format(total_count))
@@ -105,15 +106,20 @@ class Mobi(object):
                         string, 'result-{0}.aiff'.format(total_count))
             res.append('result-{0}.aiff'.format(total_count))
             
-        with open(self.outputpath+"/result.txt", "w") as ff:
-            for i in res:
+        k = 0
+        for i in res:
+            with open(self.outputpath+f"/result-{k//10}.txt", "a") as ff:
                 ff.write("file " + i + "\n")
+            k += 1
         engine.runAndWait()
+        return k//10
     def run(self):
         if self.outputformat == 'osx':
             self.to_txt()
-            self.to_aiff()
-            self.concat_aiff()
+            rs = self.to_aiff()
+            for i in range(rs+1):
+                self.concat_aiff(i)
+            os.system("rm *.aiff")
         if self.outputformat == 'gtts':
             self.to_txt()
             self.to_gMp3()
