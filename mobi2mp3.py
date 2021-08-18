@@ -20,8 +20,10 @@ class Mobi(object):
     def to_txt(self):
         bookname = self.filename.rfind("/")
         self.bookname = self.filename[bookname + 1:]
+        if(os.path.exists(f"{self.outputpath}/{self.bookname}.txt")):
+            return
         os.system(
-            "ebook-convert {0} {2}/{1}.txt".format(self.filename, self.bookname,self.outputpath))
+            "/usr/local/bin/ebook-convert {0} {2}/{1}.txt".format(self.filename, self.bookname,self.outputpath))
 
     '''
     use gTTS to read all txt for each 10 lines.
@@ -59,18 +61,23 @@ class Mobi(object):
     '''
     def concat_mp3(self):
         os.system(
-            "ffmpeg -f concat -i result.txt -c copy {0}.mp3".format(self.bookname))
+            "/usr/local/bin/ffmpeg -f concat -i result.txt -c copy {0}.mp3".format(self.bookname))
 
 
     '''
     Use ffmpeg to concat all aiff files and change to mp3
     '''
     def concat_aiff(self, count):
+        
+        if not os.path.exists(f"{count}-{self.bookname}.aiff"):
+            os.system(
+                f"/usr/local/bin/ffmpeg -f concat -i result-{count}.txt -c copy {count}-{self.bookname}.aiff")
         os.system(
-            f"ffmpeg -f concat -i result-{count}.txt -c copy {count}-{self.bookname}.aiff")
-        os.system(
-            f"ffmpeg -i {count}-{self.bookname}.aiff -f mp3 -acodec libmp3lame -ab 192000 -ar 44100 {count}-{self.bookname}.mp3")
+            f"/usr/local/bin/ffmpeg -i {count}-{self.bookname}.aiff -f mp3 -acodec libmp3lame -ab 16000 -ar 44100 {count}-{self.bookname}.mp3")
+        
         os.system(f"rm result-{count}.txt")
+        
+        
 
     '''
     Choose language for sepcific language and read via OSX tts
@@ -92,17 +99,21 @@ class Mobi(object):
             total_count = 0
             for line in f.readlines():
                 line = line.replace("\n", "")
+                if "本书由「ePUBw.COM」整理，ePUBw.COM 提供最新最全的优质电子书下载！！！" in line:
+                    continue
                 if len(line) > 0:
                     string += line
-                    count += 1
-                if count > 100 and self.language=="zh_CN" or count>0 and self.language=="en_US":
-                    engine.save_to_file(
-                        string, 'result-{0}.aiff'.format(total_count))
+                    count += len(line)
+                if (count > 5000 and self.language=="zh_CN") or (count>8000 and self.language=="en_US"):
+                    if not os.path.exists(f"result-{total_count}.aiff"):
+                        engine.save_to_file(
+                            string, 'result-{0}.aiff'.format(total_count))
                     res.append('result-{0}.aiff'.format(total_count))
                     count = 0
                     total_count += 1
                     string = ""
-            engine.save_to_file(
+            if not os.path.exists(f"result-{total_count}.aiff"):
+                engine.save_to_file(
                         string, 'result-{0}.aiff'.format(total_count))
             res.append('result-{0}.aiff'.format(total_count))
             
@@ -119,7 +130,7 @@ class Mobi(object):
             rs = self.to_aiff()
             for i in range(rs+1):
                 self.concat_aiff(i)
-            os.system("rm *.aiff")
+            os.system(f"rm {self.outputpath}/*.aiff")
         if self.outputformat == 'gtts':
             self.to_txt()
             self.to_gMp3()
@@ -157,20 +168,9 @@ def main():
     outputformat = vars(args)["format"]
     rate = vars(args)["rate"]
     book = Mobi(inputfile, language,outputpath,outputformat,rate)
+    os.chdir(outputpath)
     book.run()
 
 if __name__ == '__main__':
     main()
     
-
-'''
-engine = pyttsx3.init()
-voices = engine.getProperty('voices')
-for i in voices:
-    if i.languages[0] == 'zh_CN':
-        engine.setProperty('voice', i.id)
-engine.say('在疲劳之后，遵从自己的生理系统的召唤，小睡一下，可能是个很好的方法。', 'result.aiff')
-engine.runAndWait()
-'''
-#tts = gTTS("alexa, what's the weather today", lang='en-US')
-#tts.save('alexa.mp3')
