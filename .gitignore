@@ -3,4 +3,10 @@
 *.aiff
 *.mobi
 *.pyc
+*.epub
+*.azw3
+txt/
+book/
+mp3/
 .DS_Store
+tmp/

@@ -19,7 +19,8 @@ class Mobi(object):
     '''
     def to_txt(self):
         bookname = self.filename.rfind("/")
-        self.bookname = self.filename[bookname + 1:]
+        self.bookname = self.filename.split("/")[-1]
+        self.bookname = self.bookname.split(".")[:-1][0]
         if(os.path.exists(f"{self.outputpath}/{self.bookname}.txt")):
             return
         os.system(
@@ -68,12 +69,12 @@ class Mobi(object):
     Use ffmpeg to concat all aiff files and change to mp3
     '''
     def concat_aiff(self, count):
-        
-        if not os.path.exists(f"{count}-{self.bookname}.aiff"):
+        new_file = f"{self.bookname}-{count}"
+        if not os.path.exists(f"{new_file}.aiff"):
             os.system(
-                f"/usr/local/bin/ffmpeg -f concat -i result-{count}.txt -c copy {count}-{self.bookname}.aiff")
+                f"/usr/local/bin/ffmpeg -f concat -i result-{count}.txt -c copy {new_file}.aiff")
         os.system(
-            f"/usr/local/bin/ffmpeg -i {count}-{self.bookname}.aiff -f mp3 -acodec libmp3lame -ab 16000 -ar 44100 {count}-{self.bookname}.mp3")
+            f"/usr/local/bin/ffmpeg -i {new_file}.aiff -f mp3 -acodec libmp3lame -ab 16000 -ar 44100 {new_file}.mp3")
         
         os.system(f"rm result-{count}.txt")
         
@@ -170,7 +171,7 @@ def main():
     book = Mobi(inputfile, language,outputpath,outputformat,rate)
     os.chdir(outputpath)
     book.run()
-
+    
 if __name__ == '__main__':
     main()
     
