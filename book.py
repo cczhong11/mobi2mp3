@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 import os
 import pyttsx3
+from DataWriter.AWSS3DataWriter import AWSS3DataWriter
 
 CHINESE_COUNT_LIMIT = 5000
 ENGLISH_COUNT_LIMIT = 8000
@@ -61,7 +62,8 @@ class Book(object):
         total = len(self.book_list)
         self.file_count = total//10 + 1
         for i in range(self.file_count):
-            if os.path.exists(os.path.join(self.tmp_path, f"result-{i}.txt")):
+            if i*10>=total or os.path.exists(os.path.join(self.tmp_path, f"result-{i}.txt")):
+                self.file_count -=1
                 continue
             with open(os.path.join(self.tmp_path, f"result-{i}.txt"), "w") as f:
                 for j in range(10):
@@ -78,8 +80,14 @@ class Book(object):
             cmd = f"/usr/local/bin/ffmpeg -f concat -i {result} -c copy {new_file}"
             print(cmd)
             os.system(cmd)
-        os.system(
-            f"/usr/local/bin/ffmpeg -i {new_file} -f mp3 -acodec libmp3lame -ab 16000 -ar 44100 {final}")
+        if not os.path.exists(final):
+            os.system(
+                f"/usr/local/bin/ffmpeg -i {new_file} -f mp3 -acodec libmp3lame -ab 16000 -ar 44100 {final}")
     
     def clean(self):
         os.system(f"rm {self.tmp_path}/*")
+    
+    def upload_s3(self):
+        s3 = AWSS3DataWriter("rss-ztc")
+        for i in range(self.file_count):
+            s3.write_data("book", os.path.join(self.mp3_path, f"{self.book}-{i}.mp3"))
