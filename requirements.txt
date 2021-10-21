@@ -2,7 +2,7 @@
 # https://github.com/damnever/pigar
 
 # mobi2mp3.py: 5
-ffmpeg_python == 0.1.10
+ffmpeg_python >= 0.1.10
 
 # mobi2mp3.py: 1
 gTTS == 2.0.0
