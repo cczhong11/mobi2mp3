@@ -1,3 +1,5 @@
+# deprecated this file
+
 from gtts import gTTS
 import os
 import pyttsx3

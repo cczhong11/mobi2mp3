@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import os
+from typing import Text
 import pyttsx3
 from DataWriter.AWSS3DataWriter import AWSS3DataWriter
 
@@ -52,6 +53,15 @@ class Book(object):
                     file_txt = ""
                     count = 0
         self.book_list.append(file_txt)
+        self.save_book_list_to_tmp()
+    
+    def save_book_list_to_tmp(self):
+        for i, text in enumerate(self.book_list):
+            file_path = os.path.join(self.tmp_path, f"text-{i}.txt")
+            if os.path.exists(file_path):
+                continue
+            with open(file_path,'w') as f:
+                f.write(text)
 
     def output_tmp(self):
         for i, text in enumerate(self.book_list):

@@ -31,18 +31,13 @@ Change all mobi, epub, pdf to txt file, use tts service read them. Save them to 
 ## Usage 
 
 ```
-usage: mobi2mp3.py [-h] [-i INPUTFILE] [-o OUTPUTPATH] [-l LANGUAGE]
-                   [-f FORMAT] [-r RATE]
+usage: main.py [OPTIONS]
 
-optional arguments:
-  -h, --help            show this help message and exit
-  -i INPUTFILE, --inputfile INPUTFILE
-                        input file path
-  -o OUTPUTPATH, --outputpath OUTPUTPATH
-                        output file path
-  -l LANGUAGE, --language LANGUAGE
-                        language setting like zh_CN/en_US
-  -f FORMAT, --format FORMAT
-                        format setting like gtts/osx
-  -r RATE, --rate RATE  rate setting 100-400
+Options:
+  -i, --inputfile TEXT   input file path
+  -o, --outputpath TEXT  output file path
+  -l, --language TEXT    language setting like zh_CN/en_US
+  -r, --rate INTEGER     rate setting 100-400
+  --no_upload
+  --help                 Show this message and exit.
 ```
