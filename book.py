@@ -16,26 +16,30 @@ class Book(object):
         self.rate = rate
         filename = self.input_path.split("/")[-1]
         self.book = filename.split(".")[:-1][0]
-        self.book_path = os.path.join(self.output, "txt", self.book+".txt")
+        self.book_path = os.path.join(self.output, "txt", self.book + ".txt")
         self.tmp_path = os.path.join(self.output, "tmp")
         self.mp3_path = os.path.join(self.output, "mp3")
         self.book_list = []
         self.engine = pyttsx3.init()
         self.file_count = 0
-        voices = self.engine.getProperty('voices')
+        voices = self.engine.getProperty("voices")
         for i in voices:
-            if (i.languages[0] == self.language and i.name == "Ting-Ting") or (i.languages[0] == self.language and i.name == "Alice"):
-                self.engine.setProperty('voice', i.id)
+            if (i.languages[0] == self.language and i.name == "Ting-Ting") or (
+                i.languages[0] == self.language and i.name == "Alice"
+            ):
+                self.engine.setProperty("voice", i.id)
         if self.language == "zh_CN":
-            self.engine.setProperty('rate', 400)
+            self.engine.setProperty("rate", 400)
         else:
-            self.engine.setProperty('rate', 200)
+            self.engine.setProperty("rate", 200)
 
     def to_txt(self):
-        if(os.path.exists(f"{self.output}/txt/{self.book}.txt")):
+        if os.path.exists(f"{self.output}/txt/{self.book}.txt"):
             return
-        os.system(
-            f"/usr/local/bin/ebook-convert {self.input_path} {self.book_path}")
+        if "txt" in self.input_path:
+            os.system(f"cp {self.input_path} {self.book_path}")
+            return
+        os.system(f"/opt/homebrew/bin/ebook-convert {self.input_path} {self.book_path}")
 
     def split_book(self):
         file_txt = ""
@@ -48,19 +52,21 @@ class Book(object):
                 if len(l) > 0:
                     file_txt += l
                     count += len(l)
-                if (count > CHINESE_COUNT_LIMIT and self.language == "zh_CN") or (count > ENGLISH_COUNT_LIMIT and self.language == "en_US"):
+                if (count > CHINESE_COUNT_LIMIT and self.language == "zh_CN") or (
+                    count > ENGLISH_COUNT_LIMIT and self.language == "en_US"
+                ):
                     self.book_list.append(file_txt)
                     file_txt = ""
                     count = 0
         self.book_list.append(file_txt)
         self.save_book_list_to_tmp()
-    
+
     def save_book_list_to_tmp(self):
         for i, text in enumerate(self.book_list):
             file_path = os.path.join(self.tmp_path, f"text-{i}.txt")
             if os.path.exists(file_path):
                 continue
-            with open(file_path,'w') as f:
+            with open(file_path, "w") as f:
                 f.write(text)
 
     def output_tmp(self):
@@ -70,14 +76,16 @@ class Book(object):
                 continue
             self.engine.save_to_file(text, aiff_path)
         total = len(self.book_list)
-        self.file_count = total//10 + 1
+        self.file_count = total // 10 + 1
         for i in range(self.file_count):
-            if i*10>=total or os.path.exists(os.path.join(self.tmp_path, f"result-{i}.txt")):
-                self.file_count -=1
+            if i * 10 >= total or os.path.exists(
+                os.path.join(self.tmp_path, f"result-{i}.txt")
+            ):
+                self.file_count -= 1
                 continue
             with open(os.path.join(self.tmp_path, f"result-{i}.txt"), "w") as f:
                 for j in range(10):
-                    if i*10 + j >= total:
+                    if i * 10 + j >= total:
                         break
                     f.write(f"file result-{i*10+j}.aiff\n")
         self.engine.runAndWait()
@@ -87,16 +95,17 @@ class Book(object):
         result = os.path.join(self.tmp_path, f"result-{count}.txt")
         final = os.path.join(self.mp3_path, f"{self.book}-{count}.mp3")
         if not os.path.exists(new_file):
-            cmd = f"/usr/local/bin/ffmpeg -f concat -i {result} -c copy {new_file}"
+            cmd = f"/opt/homebrew/bin/ffmpeg -f concat -i {result} -c copy {new_file}"
             print(cmd)
             os.system(cmd)
         if not os.path.exists(final):
             os.system(
-                f"/usr/local/bin/ffmpeg -i {new_file} -f mp3 -acodec libmp3lame -ab 16000 -ar 44100 {final}")
-    
+                f"/opt/homebrew/bin/ffmpeg -i {new_file} -f mp3 -acodec libmp3lame -ab 16000 -ar 44100 {final}"
+            )
+
     def clean(self):
         os.system(f"rm {self.tmp_path}/*")
-    
+
     def upload_s3(self):
         s3 = AWSS3DataWriter("rss-ztc")
         for i in range(self.file_count):

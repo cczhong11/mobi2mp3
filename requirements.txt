@@ -5,7 +5,7 @@
 ffmpeg_python >= 0.1.10
 
 # mobi2mp3.py: 1
-gTTS == 2.0.0
+gTTS >= 2.0.0
 
 # mobi2mp3.py: 3
 pyttsx3 >= 2.7
