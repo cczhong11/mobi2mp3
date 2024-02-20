@@ -1,5 +1,5 @@
 import click
-import pyttsx3
+
 from book import Book
 from pathlib import Path
 
@@ -30,15 +30,25 @@ def create_folder(path):
 )
 @click.option("-r", "--rate", help="rate setting 100-400", default=400, type=int)
 @click.option("--no_upload", is_flag=True)
-def main(inputfile: str, outputpath: str, language: str, rate: int, no_upload: bool):
+@click.option("--debug", is_flag=True)
+def main(
+    inputfile: str,
+    outputpath: str,
+    language: str,
+    rate: int,
+    no_upload: bool,
+    debug: bool,
+):
     create_folder(outputpath)
     b = Book(inputfile, outputpath, language, rate)
     b.to_txt()
     b.split_book()
     b.output_tmp()
+
     for i in range(b.file_count):
         b.combine_aiff(i)
-    b.clean()
+    if not debug:
+        b.clean()
     if no_upload:
         return
     b.upload_s3()
