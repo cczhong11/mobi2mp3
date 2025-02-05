@@ -95,6 +95,8 @@ class Book(object):
                 f"/opt/homebrew/bin/ffmpeg -i {new_file} -f mp3 -acodec libmp3lame -ab 16000 -ar 44100 {final}"
             )
             print(f"convert {new_file} to {final}")
+        if not os.path.exists(final):
+            raise Exception(f"file {final} not exists")
 
     def clean(self):
 

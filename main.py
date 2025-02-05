@@ -44,14 +44,19 @@ def main(
     b.to_txt()
     b.split_book()
     b.output_tmp()
+    try:
+        for i in range(b.file_count):
+            b.combine_aiff(i)
 
-    for i in range(b.file_count):
-        b.combine_aiff(i)
-    if not debug:
-        b.clean()
-    if no_upload:
-        return
-    b.upload_s3()
+        if not debug:
+            b.clean()
+        if no_upload:
+            return
+        b.upload_s3()
+    except Exception as e:
+        print(e)
+        with open(os.path.join(outputpath, "error.log"), "w") as f:
+            f.write(str(e))
 
 
 if __name__ == "__main__":
