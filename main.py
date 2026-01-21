@@ -1,10 +1,11 @@
 import click
-
-from book import Book
+import os
 from pathlib import Path
 
+from book import Book
+from tts import TTSConfig, create_tts
+
 home = str(Path.home())
-import os
 
 
 def create_folder(path):
@@ -29,6 +30,14 @@ def create_folder(path):
     "-l", "--language", help="language setting like zh_CN/en_US", default="zh_CN"
 )
 @click.option("-r", "--rate", help="rate setting 100-400", default=400, type=int)
+@click.option(
+    "--tts",
+    "tts_engine",
+    help="tts engine name",
+    default="mac_say",
+    type=click.Choice(["mac_say"]),
+)
+@click.option("--voice", help="macOS voice name", default=None)
 @click.option("--no_upload", is_flag=True)
 @click.option("--debug", is_flag=True)
 def main(
@@ -36,14 +45,19 @@ def main(
     outputpath: str,
     language: str,
     rate: int,
+    tts_engine: str,
+    voice: str,
     no_upload: bool,
     debug: bool,
 ):
     create_folder(outputpath)
-    b = Book(inputfile, outputpath, language, rate)
+    tts_config = TTSConfig(language=language, rate=rate, voice=voice)
+    tts = create_tts(tts_engine, tts_config)
+    b = Book(inputfile, outputpath, language, tts)
     b.to_txt()
     b.split_book()
     b.output_tmp()
+
     try:
         for i in range(b.file_count):
             b.combine_aiff(i)

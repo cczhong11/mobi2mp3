@@ -1,6 +1,5 @@
-from dataclasses import dataclass
 import os
-from typing import Text
+from typing import List
 
 
 CHINESE_COUNT_LIMIT = 5000
@@ -8,17 +7,17 @@ ENGLISH_COUNT_LIMIT = 8000
 
 
 class Book(object):
-    def __init__(self, input_path: str, output: str, language: str, rate: str):
+    def __init__(self, input_path: str, output: str, language: str, tts_engine):
         self.input_path = input_path
         self.language = language
         self.output = output
-        self.rate = rate
+        self.tts_engine = tts_engine
         filename = self.input_path.split("/")[-1]
         self.book = filename.split(".")[:-1][0]
         self.book_path = os.path.join(self.output, "txt", self.book + ".txt")
         self.tmp_path = os.path.join(self.output, "tmp")
         self.mp3_path = os.path.join(self.output, "mp3")
-        self.book_list = []
+        self.book_list: List[str] = []
 
         self.file_count = 0
 
@@ -63,8 +62,7 @@ class Book(object):
             aiff_path = os.path.join(self.tmp_path, f"result-{i}.aiff")
             if os.path.exists(aiff_path):
                 continue
-            os.system("say -o '" + aiff_path + "' '" + text.replace("'", '"') + "'")
-            # self.engine.save_to_file(text, aiff_path)
+            self.tts_engine.synthesize(text, aiff_path)
         total = len(self.book_list)
         self.file_count = total // 10 + 1
 
@@ -77,8 +75,6 @@ class Book(object):
                     if i * 10 + j >= total:
                         break
                     f.write(f"file result-{i*10+j}.aiff\n")
-        # self.engine.runAndWait()
-
     def combine_aiff(self, count):
         if not os.path.join(self.tmp_path, f"result-{count}.txt"):
             return

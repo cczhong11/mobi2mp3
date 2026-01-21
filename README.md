@@ -38,6 +38,9 @@ Options:
   -o, --outputpath TEXT  output file path
   -l, --language TEXT    language setting like zh_CN/en_US
   -r, --rate INTEGER     rate setting 100-400
+  --tts [mac_say]        tts engine name
+  --voice TEXT           macOS voice name
   --no_upload
+  --debug
   --help                 Show this message and exit.
 ```
