@@ -11,3 +11,4 @@ mp3/
 .DS_Store
 tmp/
 summary/
+*.json

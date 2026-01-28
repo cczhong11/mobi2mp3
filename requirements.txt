@@ -9,3 +9,6 @@ gTTS >= 2.0.0
 
 # mobi2mp3.py: 3
 pyttsx3 >= 2.7
+
+# tts.py: 1
+requests >= 2.0.0

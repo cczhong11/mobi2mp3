@@ -1,4 +1,5 @@
 import os
+import shutil
 from typing import List
 
 
@@ -58,11 +59,12 @@ class Book(object):
                 f.write(text)
 
     def output_tmp(self):
+        ext = getattr(self.tts_engine, "output_format", "aiff")
         for i, text in enumerate(self.book_list):
-            aiff_path = os.path.join(self.tmp_path, f"result-{i}.aiff")
-            if os.path.exists(aiff_path):
+            audio_path = os.path.join(self.tmp_path, f"result-{i}.{ext}")
+            if os.path.exists(audio_path):
                 continue
-            self.tts_engine.synthesize(text, aiff_path)
+            self.tts_engine.synthesize(text, audio_path)
         total = len(self.book_list)
         self.file_count = total // 10 + 1
 
@@ -74,23 +76,28 @@ class Book(object):
                 for j in range(10):
                     if i * 10 + j >= total:
                         break
-                    f.write(f"file result-{i*10+j}.aiff\n")
-    def combine_aiff(self, count):
-        if not os.path.join(self.tmp_path, f"result-{count}.txt"):
+                    f.write(f"file result-{i*10+j}.{ext}\n")
+    def combine_audio(self, count):
+        ext = getattr(self.tts_engine, "output_format", "aiff")
+        if not os.path.exists(os.path.join(self.tmp_path, f"result-{count}.txt")):
             return
-        new_file = os.path.join(self.tmp_path, f"{self.book}-{count}.aiff")
+        new_file = os.path.join(self.tmp_path, f"{self.book}-{count}.{ext}")
         result = os.path.join(self.tmp_path, f"result-{count}.txt")
         final = os.path.join(self.mp3_path, f"{self.book}-{count}.mp3")
         print(new_file, result, final)
         if not os.path.exists(new_file):
-            cmd = f"/opt/homebrew/bin/ffmpeg -f concat -i {result} -c copy {new_file}"
+            cmd = f"/opt/homebrew/bin/ffmpeg -f concat -safe 0 -i {result} -c copy {new_file}"
             print(cmd)
             os.system(cmd)
-        if not os.path.exists(final):
-            os.system(
-                f"/opt/homebrew/bin/ffmpeg -i {new_file} -f mp3 -acodec libmp3lame -ab 16000 -ar 44100 {final}"
-            )
-            print(f"convert {new_file} to {final}")
+        if ext == "mp3":
+            if not os.path.exists(final):
+                shutil.copyfile(new_file, final)
+        else:
+            if not os.path.exists(final):
+                os.system(
+                    f"/opt/homebrew/bin/ffmpeg -i {new_file} -f mp3 -acodec libmp3lame -ab 16000 -ar 44100 {final}"
+                )
+                print(f"convert {new_file} to {final}")
         if not os.path.exists(final):
             raise Exception(f"file {final} not exists")
 
