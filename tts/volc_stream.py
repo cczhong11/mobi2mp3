@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 import base64
 import json
 import subprocess
@@ -8,48 +7,9 @@ from typing import Optional
 
 import requests
 
-
-@dataclass
-class TTSConfig:
-    language: str
-    rate: int
-    voice: Optional[str] = None
-
-
-class TTSEngine:
-    output_format = "aiff"
-
-    def synthesize(self, text: str, output_path: str) -> None:
-        raise NotImplementedError
-
-
-class MacSayTTS(TTSEngine):
-    output_format = "aiff"
-
-    def __init__(self, config: TTSConfig):
-        self.config = config
-
-    def synthesize(self, text: str, output_path: str) -> None:
-        cmd = ["say", "-o", output_path, "-r", str(self.config.rate)]
-        if self.config.voice:
-            cmd.extend(["-v", self.config.voice])
-        cmd.append(text)
-        subprocess.run(cmd, check=True)
-
-
-@dataclass
-class VolcTTSConfig:
-    app_id: str
-    access_key: str
-    resource_id: str
-    speaker: str
-    user_id: str = "mobi2mp3"
-    url: str = "https://openspeech.bytedance.com/api/v3/tts/unidirectional"
-    sample_rate: int = 24000
-    bit_rate: Optional[int] = None
-    model: Optional[str] = None
-    namespace: str = "BidirectionalTTS"
-    timeout_seconds: int = 60
+from tools import resolve_executable
+from .base import TTSEngine
+from .config import VolcTTSConfig
 
 
 class VolcStreamTTS(TTSEngine):
@@ -100,12 +60,10 @@ class VolcStreamTTS(TTSEngine):
         return None
 
     def synthesize(self, text: str, output_path: str) -> None:
-        headers = self._build_headers()
-        payload = self._build_payload(text)
         response = requests.post(
             self.config.url,
-            headers=headers,
-            json=payload,
+            headers=self._build_headers(),
+            json=self._build_payload(text),
             stream=True,
             timeout=self.config.timeout_seconds,
         )
@@ -133,28 +91,15 @@ class VolcStreamTTS(TTSEngine):
             raise RuntimeError("volc tts returned no audio data")
 
         if output_path.lower().endswith(".mp3"):
-            with open(output_path, "wb") as f:
-                f.write(audio_bytes)
+            with open(output_path, "wb") as file_obj:
+                file_obj.write(audio_bytes)
             return
 
         with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tmp_file:
             tmp_file.write(audio_bytes)
             tmp_mp3 = tmp_file.name
+        ffmpeg = resolve_executable("ffmpeg", "/opt/homebrew/bin/ffmpeg")
         subprocess.run(
-            ["/opt/homebrew/bin/ffmpeg", "-y", "-i", tmp_mp3, output_path],
+            [ffmpeg, "-y", "-i", tmp_mp3, output_path],
             check=True,
         )
-
-
-def create_tts(
-    engine_name: str,
-    config: TTSConfig,
-    volc_config: Optional[VolcTTSConfig] = None,
-) -> TTSEngine:
-    if engine_name == "mac_say":
-        return MacSayTTS(config)
-    if engine_name == "volc_stream":
-        if volc_config is None:
-            raise ValueError("volc_stream requires VolcTTSConfig")
-        return VolcStreamTTS(volc_config)
-    raise ValueError(f"Unknown tts engine: {engine_name}")

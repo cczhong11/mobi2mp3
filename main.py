@@ -1,10 +1,9 @@
 import click
-import json
 import os
 from pathlib import Path
 
 from book import Book
-from tts import TTSConfig, create_tts
+from tts import CliTTSOptions, build_tts_from_cli
 
 home = str(Path.home())
 
@@ -36,9 +35,9 @@ def create_folder(path):
     "tts_engine",
     help="tts engine name",
     default="mac_say",
-    type=click.Choice(["mac_say", "volc_stream"]),
+    type=click.Choice(["mac_say", "volc_stream", "mlx_qwen3"]),
 )
-@click.option("--voice", help="macOS voice name", default=None)
+@click.option("--voice", help="voice name for macOS say or mlx qwen3", default=None)
 @click.option("--volc-app-id", help="volcengine app id", default="9446257588")
 @click.option("--volc-access-key", help="volcengine access key", default=None)
 @click.option("--volc-resource-id", help="volcengine resource id", default="seed-tts-1.0")
@@ -51,6 +50,21 @@ def create_folder(path):
 @click.option("--volc-sample-rate", help="volcengine sample rate", default=24000, type=int)
 @click.option("--volc-bit-rate", help="volcengine bit rate", default=None, type=int)
 @click.option("--volc-config", "volc_config_path", help="volcengine config json path", default="key.json")
+@click.option(
+    "--mlx-model",
+    help="mlx qwen3 model repo id",
+    default="mlx-community/Qwen3-TTS-12Hz-0.6B-CustomVoice-bf16",
+)
+@click.option(
+    "--mlx-language",
+    help="mlx qwen3 language name, e.g. English/Chinese/Japanese/Korean",
+    default=None,
+)
+@click.option("--mlx-instruct", help="mlx qwen3 style or voice design instruction", default=None)
+@click.option("--mlx-ref-audio", help="mlx qwen3 custom voice reference audio path", default=None)
+@click.option("--mlx-ref-text", help="mlx qwen3 reference audio transcript", default=None)
+@click.option("--mlx-speed", help="mlx qwen3 speed multiplier", default=1.0, type=float)
+@click.option("--mlx-max-tokens", help="mlx qwen3 max generation tokens", default=16000, type=int)
 @click.option("--no_upload", is_flag=True)
 @click.option("--debug", is_flag=True)
 def main(
@@ -68,51 +82,40 @@ def main(
     volc_sample_rate: int,
     volc_bit_rate: int,
     volc_config_path: str,
+    mlx_model: str,
+    mlx_language: str,
+    mlx_instruct: str,
+    mlx_ref_audio: str,
+    mlx_ref_text: str,
+    mlx_speed: float,
+    mlx_max_tokens: int,
     no_upload: bool,
     debug: bool,
 ):
     create_folder(outputpath)
-    tts_config = TTSConfig(language=language, rate=rate, voice=voice)
-    volc_config = None
-    if tts_engine == "volc_stream":
-        from tts import VolcTTSConfig
-
-        file_config = {}
-        if volc_config_path and os.path.exists(volc_config_path):
-            try:
-                with open(volc_config_path, "r") as f:
-                    file_config = json.load(f).get("volc", {})
-            except (json.JSONDecodeError, OSError):
-                file_config = {}
-
-        app_id = volc_app_id or file_config.get("app_id")
-        access_key = (
-            volc_access_key
-            or file_config.get("access_key")
-            or os.getenv("VOLC_ACCESS_KEY")
-            or os.getenv("VOLCENGINE_ACCESS_KEY")
-        )
-        resource_id = volc_resource_id or file_config.get("resource_id")
-        speaker = volc_speaker or file_config.get("speaker")
-        model = volc_model or file_config.get("model")
-        sample_rate = (
-            volc_sample_rate if volc_sample_rate is not None else file_config.get("sample_rate")
-        )
-        bit_rate = volc_bit_rate if volc_bit_rate is not None else file_config.get("bit_rate")
-        if not access_key:
-            raise click.ClickException(
-                "volc_stream requires --volc-access-key or VOLC_ACCESS_KEY"
-            )
-        volc_config = VolcTTSConfig(
-            app_id=app_id,
-            access_key=access_key,
-            resource_id=resource_id,
-            speaker=speaker,
-            model=model,
-            sample_rate=sample_rate,
-            bit_rate=bit_rate,
-        )
-    tts = create_tts(tts_engine, tts_config, volc_config)
+    tts = build_tts_from_cli(
+        engine_name=tts_engine,
+        language=language,
+        rate=rate,
+        options=CliTTSOptions(
+            voice=voice,
+            volc_app_id=volc_app_id,
+            volc_access_key=volc_access_key,
+            volc_resource_id=volc_resource_id,
+            volc_speaker=volc_speaker,
+            volc_model=volc_model,
+            volc_sample_rate=volc_sample_rate,
+            volc_bit_rate=volc_bit_rate,
+            volc_config_path=volc_config_path,
+            mlx_model=mlx_model,
+            mlx_language=mlx_language,
+            mlx_instruct=mlx_instruct,
+            mlx_ref_audio=mlx_ref_audio,
+            mlx_ref_text=mlx_ref_text,
+            mlx_speed=mlx_speed,
+            mlx_max_tokens=mlx_max_tokens,
+        ),
+    )
     b = Book(inputfile, outputpath, language, tts)
     b.to_txt()
     b.split_book()

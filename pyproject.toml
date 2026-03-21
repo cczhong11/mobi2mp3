@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mobi2mp3"
+version = "0.1.0"
+description = "Convert mobi, epub, and pdf books into spoken audio"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "click>=8.1.8",
+    "mlx-audio>=0.3.1",
+    "requests>=2.32.5",
+]
+
+[project.scripts]
+mobi2mp3 = "main:main"
+
+[tool.setuptools]
+py-modules = ["main", "book", "util", "tools"]
+packages = ["tts"]
