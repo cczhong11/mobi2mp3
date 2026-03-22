@@ -60,7 +60,7 @@ class Book(object):
         self.save_book_list_to_tmp()
 
     def save_book_list_to_tmp(self):
-        self._reset_tmp_files()
+        #self._reset_tmp_files()
         for i, text in enumerate(self.book_list):
             file_path = os.path.join(self.tmp_path, f"text-{i}.txt")
             with open(file_path, "w") as f:
@@ -68,23 +68,24 @@ class Book(object):
 
     def output_tmp(self):
         ext = getattr(self.tts_engine, "output_format", "aiff")
+        combine_group_size = getattr(self.tts_engine, "combine_group_size", 10)
         for i, text in enumerate(self.book_list):
             audio_path = os.path.join(self.tmp_path, f"result-{i}.{ext}")
             if os.path.exists(audio_path):
                 continue
             self.tts_engine.synthesize(text, audio_path)
         total = len(self.book_list)
-        self.file_count = total // 10 + 1
+        self.file_count = total // combine_group_size + 1
 
         print(f"total {total} file count {self.file_count}")
         for i in range(self.file_count):
-            if i * 10 >= total:
+            if i * combine_group_size >= total:
                 break
             with open(os.path.join(self.tmp_path, f"result-{i}.txt"), "w") as f:
-                for j in range(10):
-                    if i * 10 + j >= total:
+                for j in range(combine_group_size):
+                    if i * combine_group_size + j >= total:
                         break
-                    f.write(f"file result-{i*10+j}.{ext}\n")
+                    f.write(f"file result-{i*combine_group_size+j}.{ext}\n")
     def combine_audio(self, count):
         ext = getattr(self.tts_engine, "output_format", "aiff")
         if not os.path.exists(os.path.join(self.tmp_path, f"result-{count}.txt")):
@@ -168,11 +169,6 @@ class Book(object):
                 os.remove(os.path.join(self.tmp_path, filename))
 
     def upload_s3(self):
-        try:
-            from DataWriter.AWSS3DataWriter import AWSS3DataWriter
-        except ImportError:
-            print("import error")
-            return
-        s3 = AWSS3DataWriter("rss-ztc")
+        uploader = S3Uploader("rss-ztc")
         for i in range(self.file_count):
-            s3.write_data("book", os.path.join(self.mp3_path, f"{self.book}-{i}.mp3"))
+            uploader.upload_file("book", os.path.join(self.mp3_path, f"{self.book}-{i}.mp3"))
