@@ -10,8 +10,7 @@ home = str(Path.home())
 
 def create_folder(path):
     def create_folder_single(folder_name):
-        if not os.path.exists(os.path.join(path, folder_name)):
-            os.mkdir(os.path.join(path, folder_name))
+        os.makedirs(os.path.join(path, folder_name), exist_ok=True)
 
     create_folder_single("txt")
     create_folder_single("mp3")

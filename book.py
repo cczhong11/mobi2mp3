@@ -3,6 +3,7 @@ import re
 import shutil
 from typing import List
 
+from aws_util import S3Uploader
 from tools import resolve_executable
 
 

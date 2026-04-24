@@ -14,6 +14,7 @@ MLX_QWEN3_LANG_CODE_MAP = {
 class MlxQwen3TTS(TTSEngine):
     output_format = "mp3"
     text_char_limit = 200
+    combine_group_size = 50
 
     def __init__(self, config: MlxQwenTTSConfig):
         self.config = config

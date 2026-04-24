@@ -9,6 +9,7 @@ description = "Convert mobi, epub, and pdf books into spoken audio"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "all-in-one-backend ; python_full_version >= '3.14'",
     "boto3>=1.42.73",
     "click>=8.1.8",
     "mlx-audio>=0.3.1",
@@ -23,3 +24,6 @@ mobi2mp3-benchmark-mlx = "benchmark_mlx:main"
 [tool.setuptools]
 py-modules = ["main", "book", "util", "tools", "merge_outputs", "benchmark_mlx", "aws_util"]
 packages = ["tts"]
+
+[tool.uv.sources]
+all-in-one-backend = { git = "ssh://git@github.com/cczhong11/my-backend-util.git" }
