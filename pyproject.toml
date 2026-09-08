@@ -22,7 +22,7 @@ mobi2mp3-merge = "merge_outputs:main"
 mobi2mp3-benchmark-mlx = "benchmark_mlx:main"
 
 [tool.setuptools]
-py-modules = ["main", "book", "util", "tools", "merge_outputs", "benchmark_mlx", "aws_util"]
+py-modules = ["main", "book", "epub_chapters", "util", "tools", "merge_outputs", "benchmark_mlx", "aws_util"]
 packages = ["tts"]
 
 [tool.uv.sources]

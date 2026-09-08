@@ -44,7 +44,13 @@ uv sync
 
 ## Main idea
 
-Change all mobi, epub, pdf to txt file, use tts service read them. Save them to local file and concat together using ffmpeg.
+EPUB files are read using their spine and table of contents so each final MP3 is one
+chapter. Other formats are converted to text and split on common Chinese/English
+chapter headings. A long chapter may use several temporary TTS chunks, which are
+joined into a single chapter file by ffmpeg.
+
+Final files use `book_chapter-title-first-5-chars_index.mp3`, for example:
+`奇风岁月_第一章风_0.mp3`.
 
 ## Usage
 

@@ -9,7 +9,7 @@ import click
 from tools import resolve_executable
 
 
-INDEX_PATTERN = re.compile(r"^(?P<stem>.+)-(?P<index>\d+)\.mp3$")
+INDEX_PATTERN = re.compile(r"^(?P<stem>.+)[-_](?P<index>\d+)\.mp3$")
 
 
 def numeric_index(path: Path) -> int:
@@ -68,7 +68,10 @@ def main(input_dir: Path, book_name: str, segments: int, suffix: str) -> None:
         raise click.ClickException("--segments must be > 0")
 
     mp3_files = sorted(
-        input_dir.glob(f"{book_name}-*.mp3"),
+        {
+            *input_dir.glob(f"{book_name}-*.mp3"),
+            *input_dir.glob(f"{book_name}_*.mp3"),
+        },
         key=numeric_index,
     )
     if not mp3_files:

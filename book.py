@@ -1,9 +1,11 @@
 import os
 import re
 import shutil
+import subprocess
 from typing import List
 
 from aws_util import S3Uploader
+from epub_chapters import Chapter, parse_epub
 from tools import resolve_executable
 
 
@@ -15,6 +17,11 @@ BODY_START_MARKERS = (
     "第一部婆罗门之子悉达多",
     "婆罗门之子悉达多",
 )
+CHAPTER_HEADING_PATTERN = re.compile(
+    r"^\s*(?:第[0-9零一二三四五六七八九十百千万两〇○]+[章节回卷部篇]|chapter\s+\d+).*$",
+    re.IGNORECASE,
+)
+INVALID_FILENAME_CHARS = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
 
 
 class Book(object):
@@ -23,22 +30,27 @@ class Book(object):
         self.language = language
         self.output = output
         self.tts_engine = tts_engine
-        filename = self.input_path.split("/")[-1]
-        self.book = filename.split(".")[:-1][0]
+        filename = os.path.basename(self.input_path)
+        self.book = os.path.splitext(filename)[0]
         self.book_path = os.path.join(self.output, "txt", self.book + ".txt")
         self.tmp_root = os.path.join(self.output, "tmp")
         self.tmp_path = os.path.join(self.tmp_root, self.book)
         self.mp3_path = os.path.join(self.output, "mp3")
         self.book_list: List[str] = []
+        self.chapters: List[Chapter] = []
+        self.chapter_chunks: List[List[str]] = []
+        self.final_files: List[str] = []
 
         self.file_count = 0
         os.makedirs(self.tmp_path, exist_ok=True)
 
     def to_txt(self):
+        if os.path.splitext(self.input_path)[1].lower() == ".epub":
+            return
         if os.path.exists(f"{self.output}/txt/{self.book}.txt"):
             return
-        if "/txt/" in self.input_path:
-            os.system(f"cp {self.input_path} {self.book_path}")
+        if os.path.splitext(self.input_path)[1].lower() == ".txt":
+            shutil.copyfile(self.input_path, self.book_path)
             return
         ebook_convert = resolve_executable(
             "ebook-convert",
@@ -46,71 +58,101 @@ class Book(object):
             "/Applications/calibre.app/Contents/MacOS/ebook-convert",
             "/opt/homebrew/bin/ebook-convert",
         )
-        os.system(f"{ebook_convert} {self.input_path} {self.book_path}")
+        subprocess.run([ebook_convert, self.input_path, self.book_path], check=True)
 
     def split_book(self):
         self.book_list = []
+        self.chapter_chunks = []
         limit = self._chunk_limit()
-        sentence_buffer: List[str] = []
-        with open(self.book_path) as f:
-            raw_text = "".join(l.strip() for l in f if l.strip())
-        content = self._strip_front_matter(raw_text)
-        if content:
-            sentence_buffer.extend(self._split_sentences(content))
-        self._append_sentence_chunks(sentence_buffer, limit)
+        if os.path.splitext(self.input_path)[1].lower() == ".epub":
+            self.chapters = parse_epub(self.input_path)
+        else:
+            with open(self.book_path, encoding="utf-8", errors="replace") as file_obj:
+                self.chapters = self._parse_text_chapters(file_obj.read())
+
+        for chapter in self.chapters:
+            chunks: List[str] = []
+            self._append_sentence_chunks(
+                self._split_sentences(chapter.content), limit, target=chunks
+            )
+            if chunks:
+                self.chapter_chunks.append(chunks)
+                self.book_list.extend(chunks)
+        self.file_count = len(self.chapter_chunks)
         self.save_book_list_to_tmp()
 
     def save_book_list_to_tmp(self):
         #self._reset_tmp_files()
-        for i, text in enumerate(self.book_list):
-            file_path = os.path.join(self.tmp_path, f"text-{i}.txt")
-            with open(file_path, "w") as f:
-                f.write(text)
+        for chapter_index, chunks in enumerate(self.chapter_chunks):
+            for chunk_index, text in enumerate(chunks):
+                file_path = os.path.join(
+                    self.tmp_path, f"text-{chapter_index}-{chunk_index}.txt"
+                )
+                with open(file_path, "w", encoding="utf-8") as f:
+                    f.write(text)
 
     def output_tmp(self):
         ext = getattr(self.tts_engine, "output_format", "aiff")
-        combine_group_size = getattr(self.tts_engine, "combine_group_size", 10)
-        for i, text in enumerate(self.book_list):
-            audio_path = os.path.join(self.tmp_path, f"result-{i}.{ext}")
-            if os.path.exists(audio_path):
-                continue
-            self.tts_engine.synthesize(text, audio_path)
-        total = len(self.book_list)
-        self.file_count = total // combine_group_size + 1
+        total = sum(len(chunks) for chunks in self.chapter_chunks)
+        for chapter_index, chunks in enumerate(self.chapter_chunks):
+            for chunk_index, text in enumerate(chunks):
+                audio_path = os.path.join(
+                    self.tmp_path, f"audio-{chapter_index}-{chunk_index}.{ext}"
+                )
+                if not os.path.exists(audio_path):
+                    self.tts_engine.synthesize(text, audio_path)
+            with open(
+                os.path.join(self.tmp_path, f"chapter-{chapter_index}.txt"),
+                "w",
+                encoding="utf-8",
+            ) as manifest:
+                for chunk_index in range(len(chunks)):
+                    manifest.write(f"file audio-{chapter_index}-{chunk_index}.{ext}\n")
+        print(f"total {total} chunks, {self.file_count} chapters")
 
-        print(f"total {total} file count {self.file_count}")
-        for i in range(self.file_count):
-            if i * combine_group_size >= total:
-                break
-            with open(os.path.join(self.tmp_path, f"result-{i}.txt"), "w") as f:
-                for j in range(combine_group_size):
-                    if i * combine_group_size + j >= total:
-                        break
-                    f.write(f"file result-{i*combine_group_size+j}.{ext}\n")
     def combine_audio(self, count):
         ext = getattr(self.tts_engine, "output_format", "aiff")
-        if not os.path.exists(os.path.join(self.tmp_path, f"result-{count}.txt")):
+        manifest = os.path.join(self.tmp_path, f"chapter-{count}.txt")
+        if not os.path.exists(manifest):
             return
         ffmpeg = resolve_executable("ffmpeg", "/opt/homebrew/bin/ffmpeg")
-        new_file = os.path.join(self.tmp_path, f"{self.book}-{count}.{ext}")
-        result = os.path.join(self.tmp_path, f"result-{count}.txt")
-        final = os.path.join(self.mp3_path, f"{self.book}-{count}.mp3")
-        print(new_file, result, final)
+        new_file = os.path.join(self.tmp_path, f"chapter-{count}.{ext}")
+        chapter_name = self._safe_chapter_name(self.chapters[count].title)
+        book_name = self._safe_filename(self.book)
+        final = os.path.join(self.mp3_path, f"{book_name}_{chapter_name}_{count}.mp3")
+        print(new_file, manifest, final)
         if not os.path.exists(new_file):
-            cmd = f"{ffmpeg} -f concat -safe 0 -i {result} -c copy {new_file}"
-            print(cmd)
-            os.system(cmd)
+            cmd = [ffmpeg, "-f", "concat", "-safe", "0", "-i", manifest, "-c", "copy", new_file]
+            print(" ".join(cmd))
+            subprocess.run(cmd, check=True)
         if ext == "mp3":
             if not os.path.exists(final):
                 shutil.copyfile(new_file, final)
         else:
             if not os.path.exists(final):
-                os.system(
-                    f"{ffmpeg} -i {new_file} -f mp3 -acodec libmp3lame -ab 16000 -ar 44100 {final}"
+                subprocess.run(
+                    [
+                        ffmpeg,
+                        "-i",
+                        new_file,
+                        "-f",
+                        "mp3",
+                        "-acodec",
+                        "libmp3lame",
+                        "-ab",
+                        "16000",
+                        "-ar",
+                        "44100",
+                        final,
+                    ],
+                    check=True,
                 )
                 print(f"convert {new_file} to {final}")
         if not os.path.exists(final):
             raise Exception(f"file {final} not exists")
+        while len(self.final_files) <= count:
+            self.final_files.append("")
+        self.final_files[count] = final
 
     def clean(self):
         shutil.rmtree(self.tmp_path, ignore_errors=True)
@@ -123,14 +165,17 @@ class Book(object):
             return CHINESE_COUNT_LIMIT
         return ENGLISH_COUNT_LIMIT
 
-    def _append_sentence_chunks(self, sentences: List[str], limit: int):
+    def _append_sentence_chunks(
+        self, sentences: List[str], limit: int, target: List[str] | None = None
+    ):
+        target = self.book_list if target is None else target
         current = ""
         for sentence in sentences:
             if len(sentence) > limit:
                 if current:
-                    self.book_list.append(current)
+                    target.append(current)
                     current = ""
-                self.book_list.extend(self._force_split_text(sentence, limit))
+                target.extend(self._force_split_text(sentence, limit))
                 continue
             if not current:
                 current = sentence
@@ -138,10 +183,10 @@ class Book(object):
             if len(current) + len(sentence) <= limit:
                 current += sentence
             else:
-                self.book_list.append(current)
+                target.append(current)
                 current = sentence
         if current:
-            self.book_list.append(current)
+            target.append(current)
 
     def _split_sentences(self, text: str) -> List[str]:
         sentences = [item.strip() for item in SENTENCE_SPLIT_PATTERN.findall(text) if item.strip()]
@@ -160,6 +205,40 @@ class Book(object):
                 return normalized[idx:]
         return normalized
 
+    def _parse_text_chapters(self, text: str) -> List[Chapter]:
+        lines = [line.strip() for line in text.splitlines()]
+        chapters: List[Chapter] = []
+        title = "正文"
+        content: List[str] = []
+        found_heading = False
+        for line in lines:
+            if not line:
+                continue
+            if CHAPTER_HEADING_PATTERN.match(line) and len(line) <= 80:
+                if content:
+                    chapter_text = self._strip_front_matter("".join(content))
+                    if chapter_text:
+                        chapters.append(Chapter(title, chapter_text))
+                title = line
+                content = [line]
+                found_heading = True
+            else:
+                content.append(line)
+        if content:
+            chapter_text = self._strip_front_matter("".join(content))
+            if chapter_text:
+                chapters.append(Chapter(title, chapter_text))
+        if found_heading and chapters and chapters[0].title == "正文":
+            chapters = chapters[1:]
+        return chapters or [Chapter("正文", self._strip_front_matter(text))]
+
+    def _safe_filename(self, value: str) -> str:
+        cleaned = INVALID_FILENAME_CHARS.sub("_", value)
+        return re.sub(r"\s+", " ", cleaned).strip(" ._") or "未命名"
+
+    def _safe_chapter_name(self, title: str) -> str:
+        return self._safe_filename(title)[:5]
+
     def _reset_tmp_files(self):
         for filename in os.listdir(self.tmp_path):
             if (
@@ -171,5 +250,6 @@ class Book(object):
 
     def upload_s3(self):
         uploader = S3Uploader("rss-ztc")
-        for i in range(self.file_count):
-            uploader.upload_file("book", os.path.join(self.mp3_path, f"{self.book}-{i}.mp3"))
+        for path in self.final_files:
+            if path:
+                uploader.upload_file("book", path)
