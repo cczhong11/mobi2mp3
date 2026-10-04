@@ -20,9 +20,11 @@ dependencies = [
 mobi2mp3 = "main:main"
 mobi2mp3-merge = "merge_outputs:main"
 mobi2mp3-benchmark-mlx = "benchmark_mlx:main"
+mobi2mp3-volc-balance = "volc_balance:main"
+mobi2mp3-gemini-text = "gemini_batch_text:main"
 
 [tool.setuptools]
-py-modules = ["main", "book", "epub_chapters", "util", "tools", "merge_outputs", "benchmark_mlx", "aws_util"]
+py-modules = ["main", "book", "epub_chapters", "util", "tools", "merge_outputs", "benchmark_mlx", "aws_util", "volc_balance", "gemini_batch_text"]
 packages = ["tts"]
 
 [tool.uv.sources]

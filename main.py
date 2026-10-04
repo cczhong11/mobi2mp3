@@ -118,7 +118,8 @@ def main(
     b = Book(inputfile, outputpath, language, tts)
     b.to_txt()
     b.split_book()
-    b.output_tmp()
+    if not b.output_tmp():
+        return
 
     try:
         for i in range(b.file_count):

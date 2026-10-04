@@ -94,13 +94,19 @@ class Book(object):
     def output_tmp(self):
         ext = getattr(self.tts_engine, "output_format", "aiff")
         total = sum(len(chunks) for chunks in self.chapter_chunks)
+        pending = []
         for chapter_index, chunks in enumerate(self.chapter_chunks):
             for chunk_index, text in enumerate(chunks):
                 audio_path = os.path.join(
                     self.tmp_path, f"audio-{chapter_index}-{chunk_index}.{ext}"
                 )
                 if not os.path.exists(audio_path):
-                    self.tts_engine.synthesize(text, audio_path)
+                    pending.append((text, audio_path))
+
+        for text, audio_path in pending:
+            self.tts_engine.synthesize(text, audio_path)
+
+        for chapter_index, chunks in enumerate(self.chapter_chunks):
             with open(
                 os.path.join(self.tmp_path, f"chapter-{chapter_index}.txt"),
                 "w",
@@ -109,6 +115,7 @@ class Book(object):
                 for chunk_index in range(len(chunks)):
                     manifest.write(f"file audio-{chapter_index}-{chunk_index}.{ext}\n")
         print(f"total {total} chunks, {self.file_count} chapters")
+        return True
 
     def combine_audio(self, count):
         ext = getattr(self.tts_engine, "output_format", "aiff")
@@ -119,7 +126,7 @@ class Book(object):
         new_file = os.path.join(self.tmp_path, f"chapter-{count}.{ext}")
         chapter_name = self._safe_chapter_name(self.chapters[count].title)
         book_name = self._safe_filename(self.book)
-        final = os.path.join(self.mp3_path, f"{book_name}_{chapter_name}_{count}.mp3")
+        final = os.path.join(self.mp3_path, f"{book_name}_{count:03d}_{chapter_name}.mp3")
         print(new_file, manifest, final)
         if not os.path.exists(new_file):
             cmd = [ffmpeg, "-f", "concat", "-safe", "0", "-i", manifest, "-c", "copy", new_file]

@@ -35,3 +35,4 @@ class MlxQwenTTSConfig:
     ref_text: Optional[str] = None
     max_tokens: int = 16000
     audio_format: str = "mp3"
+

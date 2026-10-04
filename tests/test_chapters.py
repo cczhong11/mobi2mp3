@@ -56,8 +56,8 @@ class ChapterTests(unittest.TestCase):
             self.assertGreater(len(book.chapter_chunks[0]), 1)
             self.assertEqual(book._safe_chapter_name(book.chapters[0].title), "第一章风起")
             self.assertEqual(
-                Path(book.mp3_path) / f"{book.book}_{book._safe_chapter_name(book.chapters[0].title)}_0.mp3",
-                Path(directory) / "mp3" / "我的书_第一章风起_0.mp3",
+                Path(book.mp3_path) / f"{book.book}_000_{book._safe_chapter_name(book.chapters[0].title)}.mp3",
+                Path(directory) / "mp3" / "我的书_000_第一章风起.mp3",
             )
 
     def test_combine_uses_book_short_chapter_and_index_filename(self):
@@ -72,7 +72,7 @@ class ChapterTests(unittest.TestCase):
 
             book.combine_audio(0)
 
-            output = Path(book.mp3_path, "我的书_第一章风起_0.mp3")
+            output = Path(book.mp3_path, "我的书_000_第一章风起.mp3")
             self.assertTrue(output.exists())
             self.assertEqual(book.final_files, [str(output)])
 
