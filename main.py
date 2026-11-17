@@ -1,9 +1,12 @@
 import click
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 from book import Book
 from tts import CliTTSOptions, build_tts_from_cli
+
+load_dotenv()
 
 home = str(Path.home())
 
@@ -34,9 +37,16 @@ def create_folder(path):
     "tts_engine",
     help="tts engine name",
     default="mac_say",
-    type=click.Choice(["mac_say", "volc_stream", "mlx_qwen3"]),
+    type=click.Choice(["mac_say", "volc_stream", "mlx_qwen3", "omlx"]),
 )
-@click.option("--voice", help="voice name for macOS say or mlx qwen3", default=None)
+@click.option("--voice", help="voice name for macOS say, mlx qwen3 or oMLX", default=None)
+@click.option("--omlx-url", help="oMLX API base URL including /v1", default="http://localhost:8000/v1")
+@click.option("--omlx-model", help="model ID listed by oMLX", default="Qwen3-TTS-12Hz-1.7B-CustomVoice-bf16")
+@click.option("--omlx-api-key", help="oMLX API key (or set OMLX_API_KEY)", envvar="OMLX_API_KEY", default=None)
+@click.option("--omlx-language", help="oMLX language, e.g. Chinese or English", default=None)
+@click.option("--omlx-instruct", help="oMLX narration style instruction", default=None)
+@click.option("--omlx-speed", help="oMLX speed multiplier", default=1.0, type=click.FloatRange(min=0, min_open=True))
+@click.option("--omlx-timeout", help="oMLX request timeout in seconds", default=600.0, type=click.FloatRange(min=0, min_open=True))
 @click.option("--volc-app-id", help="volcengine app id", default="9446257588")
 @click.option("--volc-access-key", help="volcengine access key", default=None)
 @click.option("--volc-resource-id", help="volcengine resource id", default="seed-tts-1.0")
@@ -73,6 +83,13 @@ def main(
     rate: int,
     tts_engine: str,
     voice: str,
+    omlx_url: str,
+    omlx_model: str,
+    omlx_api_key: str,
+    omlx_language: str,
+    omlx_instruct: str,
+    omlx_speed: float,
+    omlx_timeout: float,
     volc_app_id: str,
     volc_access_key: str,
     volc_resource_id: str,
@@ -98,6 +115,13 @@ def main(
         rate=rate,
         options=CliTTSOptions(
             voice=voice,
+            omlx_url=omlx_url,
+            omlx_model=omlx_model,
+            omlx_api_key=omlx_api_key,
+            omlx_language=omlx_language,
+            omlx_instruct=omlx_instruct,
+            omlx_speed=omlx_speed,
+            omlx_timeout=omlx_timeout,
             volc_app_id=volc_app_id,
             volc_access_key=volc_access_key,
             volc_resource_id=volc_resource_id,

@@ -1,10 +1,15 @@
-from .config import MlxQwenTTSConfig, TTSConfig, VolcTTSConfig
+from .config import MlxQwenTTSConfig, OmlxTTSConfig, TTSConfig, VolcTTSConfig
 from .mac_say import MacSayTTS
 from .mlx_qwen3 import MlxQwen3TTS
+from .omlx import OmlxTTS
 from .volc_stream import VolcStreamTTS
 
 
 def create_tts(engine_name: str, config: TTSConfig, engine_config=None):
+    if engine_name == "omlx":
+        if not isinstance(engine_config, OmlxTTSConfig):
+            raise ValueError("omlx requires OmlxTTSConfig")
+        return OmlxTTS(engine_config)
     if engine_name == "mac_say":
         return MacSayTTS(config)
     if engine_name == "volc_stream":

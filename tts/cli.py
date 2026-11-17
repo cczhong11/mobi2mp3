@@ -5,7 +5,7 @@ from typing import Any, Optional
 
 import click
 
-from .config import MlxQwenTTSConfig, TTSConfig, VolcTTSConfig
+from .config import MlxQwenTTSConfig, OmlxTTSConfig, TTSConfig, VolcTTSConfig
 from .factory import create_tts
 
 MLX_QWEN3_LANGUAGE_MAP = {
@@ -19,6 +19,13 @@ MLX_QWEN3_LANGUAGE_MAP = {
 @dataclass
 class CliTTSOptions:
     voice: Optional[str] = None
+    omlx_url: str = "http://localhost:8000/v1"
+    omlx_model: str = "Qwen3-TTS-12Hz-1.7B-CustomVoice-bf16"
+    omlx_api_key: Optional[str] = None
+    omlx_language: Optional[str] = None
+    omlx_instruct: Optional[str] = None
+    omlx_speed: float = 1.0
+    omlx_timeout: float = 600
     volc_app_id: str = "9446257588"
     volc_access_key: Optional[str] = None
     volc_resource_id: str = "seed-tts-1.0"
@@ -43,6 +50,17 @@ def build_tts_from_cli(engine_name: str, language: str, rate: int, options: CliT
         engine_config = build_volc_config(options)
     elif engine_name == "mlx_qwen3":
         engine_config = build_mlx_qwen_config(language, options)
+    elif engine_name == "omlx":
+        engine_config = OmlxTTSConfig(
+            model=options.omlx_model,
+            language=options.omlx_language or MLX_QWEN3_LANGUAGE_MAP.get(language, language),
+            base_url=options.omlx_url,
+            api_key=options.omlx_api_key or os.getenv("OMLX_API_KEY"),
+            voice=options.voice or "serena",
+            speed=options.omlx_speed,
+            instructions=options.omlx_instruct,
+            timeout_seconds=options.omlx_timeout,
+        )
     return create_tts(engine_name, base_config, engine_config)
 
 

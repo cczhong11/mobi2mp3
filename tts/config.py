@@ -36,3 +36,15 @@ class MlxQwenTTSConfig:
     max_tokens: int = 16000
     audio_format: str = "mp3"
 
+
+@dataclass
+class OmlxTTSConfig:
+    model: str
+    language: str
+    base_url: str = "http://localhost:8000/v1"
+    api_key: Optional[str] = None
+    voice: str = "serena"
+    speed: float = 1.0
+    instructions: Optional[str] = None
+    timeout_seconds: float = 600
+

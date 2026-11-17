@@ -1,6 +1,6 @@
 # mobi2mp3
 
-This tool converts mobi/epub/pdf books into spoken audio files. It supports macOS `say`, Volcengine streaming TTS, and MLX Qwen3 TTS on Apple Silicon.
+This tool converts mobi/epub/pdf books into spoken audio files. It supports macOS `say`, Volcengine streaming TTS, MLX Qwen3 TTS on Apple Silicon, and models served by oMLX.
 
 ## Standalone Gemini Batch text TTS
 
@@ -83,9 +83,16 @@ Options:
   -o, --outputpath TEXT  output file path
   -l, --language TEXT    language setting like zh_CN/en_US
   -r, --rate INTEGER     rate setting 100-400
-  --tts [mac_say|volc_stream|mlx_qwen3]
+  --tts [mac_say|volc_stream|mlx_qwen3|omlx]
                           tts engine name
   --voice TEXT           voice name for macOS say or mlx qwen3
+  --omlx-url TEXT        oMLX API base URL including /v1
+  --omlx-model TEXT      model ID listed by oMLX
+  --omlx-api-key TEXT    oMLX API key (or set OMLX_API_KEY)
+  --omlx-language TEXT   language name, e.g. Chinese or English
+  --omlx-instruct TEXT   narration style instruction
+  --omlx-speed FLOAT     speed multiplier
+  --omlx-timeout FLOAT   request timeout in seconds (default: 600)
   --volc-app-id TEXT     volcengine app id
   --volc-access-key TEXT
                           volcengine access key
@@ -149,3 +156,30 @@ uv run mobi2mp3 --help
 uv add requests
 uv add --upgrade mlx-audio
 ```
+
+### Use a model installed in oMLX
+
+Start your oMLX server and install a TTS model. This provider calls
+`POST /v1/audio/speech`; oMLX handles model loading and generation and returns
+MP3 audio. The client does not download or load a second copy of the model.
+The default model ID is `Qwen3-TTS-12Hz-1.7B-CustomVoice-bf16` and the default
+voice is `serena`. Use the exact model ID shown by oMLX's `/v1/models` endpoint
+if yours differs. Language defaults follow `--language` (`zh_CN` → `Chinese`).
+
+If your server requires authentication, set `OMLX_API_KEY` to its API key
+using your shell or secret manager. Then run:
+
+```bash
+uv run mobi2mp3 -i /path/to/book.epub \
+  --tts omlx \
+  --omlx-url http://localhost:8000/v1 \
+  --omlx-model Qwen3-TTS-12Hz-1.7B-CustomVoice-bf16 \
+  --voice serena \
+  --no_upload
+```
+
+Use `--omlx-instruct "Warm audiobook narrator with calm pacing"` to request
+a narration style. Requests use chunks of at most 200 characters. Chapter
+merging still requires ffmpeg. This provider currently supports preset voices
+and style instructions; reference audio cloning is available through the
+direct `mlx_qwen3` provider.
